@@ -23,8 +23,8 @@ class SimpleDrivingEnv(gym.Env):
                 low=np.array([-1, -.6], dtype=np.float32),
                 high=np.array([1, .6], dtype=np.float32))
         self.observation_space = gym.spaces.box.Box(
-            low=np.array([-40, -40], dtype=np.float32),
-            high=np.array([40, 40], dtype=np.float32))
+            low=np.array([-40, -40, -40, -40,-40, -40,-40,-40, -40], dtype=np.float32),
+            high=np.array([40, 40, 40, 40, 40, 40, 40, 40, 40], dtype=np.float32))
         self.np_random, _ = gym.utils.seeding.np_random()
 
         if renders:
@@ -64,8 +64,9 @@ class SimpleDrivingEnv(gym.Env):
           carpos, carorn = self._p.getBasePositionAndOrientation(self.car.car)
           goalpos, goalorn = self._p.getBasePositionAndOrientation(self.goal_object.goal)
           car_ob = self.getExtendedObservation()
-
+          #print(f" Step Count  : {self._envStepCounter}")
           if self._termination():
+            
             self.done = True
             break
           self._envStepCounter += 1
@@ -75,16 +76,16 @@ class SimpleDrivingEnv(gym.Env):
                                   # (car_ob[1] - self.goal[1]) ** 2))
         dist_to_goal = math.sqrt(((carpos[0] - goalpos[0]) ** 2 +
                                   (carpos[1] - goalpos[1]) ** 2))
-        # reward = max(self.prev_dist_to_goal - dist_to_goal, 0)
+        #reward = max(self.prev_dist_to_goal - dist_to_goal, 0)
         reward = -dist_to_goal
         self.prev_dist_to_goal = dist_to_goal
-
+        #print(f"reward {reward}")
         # Done by reaching goal
         if dist_to_goal < 1.5 and not self.reached_goal:
-            #print("reached goal")
+            print("reached goal")
+            reward += 50
             self.done = True
             self.reached_goal = True
-
         ob = car_ob
         return ob, reward, self.done, dict()
 
@@ -182,12 +183,15 @@ class SimpleDrivingEnv(gym.Env):
         goalpos, goalorn = self._p.getBasePositionAndOrientation(self.goal_object.goal)
         invCarPos, invCarOrn = self._p.invertTransform(carpos, carorn)
         goalPosInCar, goalOrnInCar = self._p.multiplyTransforms(invCarPos, invCarOrn, goalpos, goalorn)
-
-        observation = [goalPosInCar[0], goalPosInCar[1]]
+        dist_to_goal = math.sqrt(((carpos[0] - goalpos[0]) ** 2 +
+                                  (carpos[1] - goalpos[1]) ** 2))
+        observation = [goalPosInCar[0], goalPosInCar[1], 
+                       goalOrnInCar[0], goalOrnInCar[1], 
+                       carpos[0],carpos[1], carorn[0], carorn[1], dist_to_goal]
         return observation
 
     def _termination(self):
-        return self._envStepCounter > 2000
+        return self._envStepCounter > 4000
 
     def close(self):
         self._p.disconnect()
